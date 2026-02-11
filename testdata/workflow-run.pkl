@@ -1,0 +1,40 @@
+/*
+ * Conformance Test: Create WorkflowRun
+ *
+ * Dispatches a GitHub Actions workflow and tracks the run.
+ * This is an async resource: Create returns InProgress, Status polls for completion.
+ *
+ * Prerequisites:
+ *   - GITHUB_TEST_OWNER/GITHUB_TEST_REPO must exist
+ *   - The repo must contain .github/workflows/formae-test.yml (a simple workflow_dispatch workflow)
+ *   - See scripts/ci/clean-environment.sh for setup
+ */
+amends "@formae/forma.pkl"
+import "@formae/formae.pkl"
+
+import "@github/github.pkl"
+import "@github/actions/workflow_run.pkl"
+
+local testRunID = read("env:FORMAE_TEST_RUN_ID")
+local testOwner = read("env:GITHUB_TEST_OWNER")
+local testRepo = read("env:GITHUB_TEST_REPO")
+local stackName = "plugin-sdk-test-workflow-run-\(testRunID)"
+
+forma {
+  new formae.Stack {
+    label = stackName
+    description = "Plugin SDK test for GitHub Actions WorkflowRun"
+  }
+
+  new formae.Target {
+    label = "github-target"
+    config = new github.Config {}
+  }
+
+  new workflow_run.WorkflowRun {
+    label = "plugin-sdk-test-workflow-run"
+    repository = "\(testOwner)/\(testRepo)"
+    workflow = "formae-test.yml"
+    ref = "main"
+  }
+}

@@ -1,0 +1,36 @@
+/*
+ * Conformance Test: Update Variable (in-place)
+ *
+ * Changes the mutable `value` field to trigger an in-place update.
+ * The createOnly fields (owner, repo, name) remain unchanged.
+ */
+amends "@formae/forma.pkl"
+import "@formae/formae.pkl"
+
+import "@github/github.pkl"
+import "@github/actions/variable.pkl"
+
+local testRunID = read("env:FORMAE_TEST_RUN_ID").toUpperCase()
+local testOwner = read("env:GITHUB_TEST_OWNER")
+local testRepo = read("env:GITHUB_TEST_REPO")
+local stackName = "plugin-sdk-test-variable-\(testRunID)"
+
+forma {
+  new formae.Stack {
+    label = stackName
+    description = "Plugin SDK test for GitHub Actions Variable"
+  }
+
+  new formae.Target {
+    label = "github-target"
+    config = new github.Config {}
+  }
+
+  new variable.Variable {
+    label = "plugin-sdk-test-variable"
+    owner = testOwner
+    repo = testRepo
+    name = "FORMAE_TEST_\(testRunID)"
+    value = "updated-value"                  // CHANGED
+  }
+}

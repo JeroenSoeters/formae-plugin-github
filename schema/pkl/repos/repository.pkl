@@ -1,0 +1,111 @@
+module github.repos.repository
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Repos::Repository"
+
+typealias Visibility = "public"|"private"|"internal"
+
+open class RepositoryResolvable extends formae.Resolvable {
+    hidden type = module.type
+
+    hidden fullName: RepositoryResolvable = (this) { property = "fullName" }
+    hidden htmlUrl: RepositoryResolvable = (this) { property = "htmlUrl" }
+    hidden cloneUrl: RepositoryResolvable = (this) { property = "cloneUrl" }
+    hidden sshUrl: RepositoryResolvable = (this) { property = "sshUrl" }
+    hidden defaultBranch: RepositoryResolvable = (this) { property = "defaultBranch" }
+}
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "fullName"
+}
+open class Repository extends formae.Resource {
+    hidden parent = this
+
+    /// Owner (user or organization) of the repository.
+    @github.FieldHint { createOnly = true }
+    owner: String
+
+    /// Repository name.
+    @github.FieldHint {}
+    name: String
+
+    /// Short description of the repository.
+    @github.FieldHint {}
+    description: String?
+
+    /// Visibility: public, private, or internal (GitHub Enterprise only).
+    @github.FieldHint {}
+    visibility: Visibility = "public"
+
+    /// URL with more information about the repository.
+    @github.FieldHint {}
+    homepage: String?
+
+    /// Enable the Issues feature.
+    @github.FieldHint {}
+    hasIssues: Boolean = true
+
+    /// Enable the Wiki feature.
+    @github.FieldHint {}
+    hasWiki: Boolean = true
+
+    /// Enable the Projects feature.
+    @github.FieldHint {}
+    hasProjects: Boolean = true
+
+    /// Make this repository a template repository.
+    @github.FieldHint {}
+    isTemplate: Boolean?
+
+    /// The default branch (must already exist).
+    @github.FieldHint {}
+    defaultBranch: String?
+
+    /// Allow squash-merging pull requests.
+    @github.FieldHint {}
+    allowSquashMerge: Boolean = true
+
+    /// Allow merge commits on pull requests.
+    @github.FieldHint {}
+    allowMergeCommit: Boolean = true
+
+    /// Allow rebase-merging pull requests.
+    @github.FieldHint {}
+    allowRebaseMerge: Boolean = true
+
+    /// Allow auto-merge on pull requests.
+    @github.FieldHint {}
+    allowAutoMerge: Boolean?
+
+    /// Automatically delete head branches after merge.
+    @github.FieldHint {}
+    deleteBranchOnMerge: Boolean?
+
+    /// Archive the repository (one-way: cannot be unarchived via API).
+    @github.FieldHint {}
+    archived: Boolean?
+
+    /// Repository topics (automatically lowercased by GitHub).
+    @github.FieldHint {}
+    topics: Listing<String>?
+
+    /// Create an initial commit with a README. Only used at creation time.
+    @github.FieldHint { createOnly = true }
+    autoInit: Boolean?
+
+    /// Populate .gitignore from a template (e.g. "Go", "Node"). Only used at creation time.
+    @github.FieldHint { createOnly = true }
+    gitignoreTemplate: String?
+
+    /// Populate LICENSE from a template (e.g. "mit", "apache-2.0"). Only used at creation time.
+    @github.FieldHint { createOnly = true }
+    licenseTemplate: String?
+
+    hidden res: RepositoryResolvable = new {
+        label = parent.label
+        stack = parent.stack?.label
+    }
+}

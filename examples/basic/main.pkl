@@ -1,0 +1,131 @@
+/*
+ * Basic Example: GitHub Repository with CI/CD
+ *
+ * Manages a repository with branch protection, a team with access,
+ * and Actions variables/secrets for CI/CD configuration.
+ *
+ * Prerequisites:
+ *   - GITHUB_TOKEN environment variable with appropriate scopes
+ *   - An existing GitHub organization
+ *
+ * Run with:
+ *   formae eval examples/basic/main.pkl
+ *   formae apply --mode reconcile --watch examples/basic/main.pkl
+ */
+amends "@formae/forma.pkl"
+
+import "@formae/formae.pkl"
+import "@github/github.pkl"
+import "@github/repos/repository.pkl"
+import "@github/repos/branch_protection.pkl"
+import "@github/teams/team.pkl"
+import "@github/teams/membership.pkl"
+import "@github/teams/repository_access.pkl"
+import "@github/actions/variable.pkl"
+import "@github/actions/secret.pkl"
+
+local org = "my-org"
+
+forma {
+  // ---------------------------------------------------------------------------
+  // Stack & Target
+  // ---------------------------------------------------------------------------
+  new formae.Stack {
+    label = "example"
+    description = "Example stack: GitHub repo with CI/CD"
+  }
+
+  new formae.Target {
+    label = "github"
+    config = new github.Config {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // Repository
+  // ---------------------------------------------------------------------------
+  new repository.Repository {
+    label = "my-service"
+    owner = org
+    name = "my-service"
+    description = "My microservice repository"
+    visibility = "private"
+    hasIssues = true
+    hasWiki = false
+    allowSquashMerge = true
+    allowMergeCommit = false
+    allowRebaseMerge = false
+    deleteBranchOnMerge = true
+    topics = new Listing { "golang"; "microservice"; "formae" }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Branch Protection
+  // ---------------------------------------------------------------------------
+  new branch_protection.BranchProtection {
+    label = "main-protection"
+    owner = org
+    repo = "my-service"
+    branch = "main"
+    enforceAdmins = true
+    requiredLinearHistory = true
+    allowForcePushes = false
+    allowDeletions = false
+
+    requiredStatusChecks = new branch_protection.RequiredStatusChecks {
+      strict = true
+      contexts = new Listing { "ci/build"; "ci/test" }
+    }
+
+    requiredPullRequestReviews = new branch_protection.RequiredPullRequestReviews {
+      requiredApprovingReviewCount = 1
+      dismissStaleReviews = true
+      requireCodeOwnerReviews = true
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Team & Access
+  // ---------------------------------------------------------------------------
+  new team.Team {
+    label = "platform-team"
+    organization = org
+    name = "platform"
+    description = "Platform engineering team"
+    privacy = "closed"
+  }
+
+  new membership.Membership {
+    label = "alice-membership"
+    organization = org
+    teamSlug = "platform"
+    username = "alice"
+    role = "maintainer"
+  }
+
+  new repository_access.RepositoryAccess {
+    label = "platform-my-service-access"
+    organization = org
+    teamSlug = "platform"
+    repository = "\(org)/my-service"
+    permission = "push"
+  }
+
+  // ---------------------------------------------------------------------------
+  // CI/CD Configuration
+  // ---------------------------------------------------------------------------
+  new variable.Variable {
+    label = "deploy-env"
+    owner = org
+    repo = "my-service"
+    name = "DEPLOY_ENVIRONMENT"
+    value = "staging"
+  }
+
+  new secret.Secret {
+    label = "deploy-token"
+    owner = org
+    repo = "my-service"
+    name = "DEPLOY_TOKEN"
+    value = "changeme"
+  }
+}

@@ -1,0 +1,52 @@
+module github.actions.workflow_run
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Actions::WorkflowRun"
+
+open class WorkflowRunResolvable extends formae.Resolvable {
+    hidden type = module.type
+
+    hidden runId: WorkflowRunResolvable = (this) { property = "runId" }
+    hidden status: WorkflowRunResolvable = (this) { property = "status" }
+    hidden conclusion: WorkflowRunResolvable = (this) { property = "conclusion" }
+    hidden htmlUrl: WorkflowRunResolvable = (this) { property = "htmlUrl" }
+    hidden artifactId: WorkflowRunResolvable = (this) { property = "artifactId" }
+    hidden artifactDownloadUrl: WorkflowRunResolvable = (this) { property = "artifactDownloadUrl" }
+    hidden artifactSizeInBytes: WorkflowRunResolvable = (this) { property = "artifactSizeInBytes" }
+}
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "runId"
+}
+open class WorkflowRun extends formae.Resource {
+    hidden parent = this
+
+    /// Full repository name (owner/repo).
+    @github.FieldHint { createOnly = true }
+    repository: String
+
+    /// Workflow file name (e.g. "build.yml").
+    @github.FieldHint { createOnly = true }
+    workflow: String
+
+    /// Git ref (tag or branch) to run against.
+    @github.FieldHint {}
+    ref: String
+
+    /// Workflow dispatch inputs (key-value pairs).
+    @github.FieldHint {}
+    inputs: Mapping<String, String>?
+
+    /// Name of the artifact to surface as top-level properties.
+    /// If not specified, the first artifact from the run is used.
+    @github.FieldHint {}
+    artifactName: String?
+
+    hidden res: WorkflowRunResolvable = new {
+        label = parent.label
+        stack = parent.stack?.label
+    }
+}

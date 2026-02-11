@@ -1,0 +1,28 @@
+module github.actions.variable
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Actions::Variable"
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "compositeId"
+}
+open class Variable extends formae.Resource {
+    /// Repository owner.
+    @github.FieldHint { createOnly = true }
+    owner: String
+
+    /// Repository name.
+    @github.FieldHint { createOnly = true }
+    repo: String
+
+    /// Variable name.
+    @github.FieldHint { createOnly = true }
+    name: String
+
+    /// Variable value.
+    @github.FieldHint {}
+    value: String
+}

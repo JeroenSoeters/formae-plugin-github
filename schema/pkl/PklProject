@@ -1,0 +1,14 @@
+amends "pkl:Project"
+
+package {
+  name = "github"
+  baseUri = "package://hub.platform.engineering/plugins/github/schema/pkl/github/github"
+  version = read("VERSION").text.trim()
+  packageZipUrl = "https://hub.platform.engineering/plugins/github/schema/pkl/github/github@\(version).zip"
+}
+
+dependencies {
+  ["formae"] {
+    uri = "package://hub.platform.engineering/plugins/pkl/schema/pkl/formae/formae@0.81.0"
+  }
+}

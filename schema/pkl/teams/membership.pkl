@@ -1,0 +1,30 @@
+module github.teams.membership
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Teams::Membership"
+
+typealias Role = "member"|"maintainer"
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "compositeId"
+}
+open class Membership extends formae.Resource {
+    /// Organization that owns the team.
+    @github.FieldHint { createOnly = true }
+    organization: String
+
+    /// Team slug (URL-friendly name).
+    @github.FieldHint { createOnly = true }
+    teamSlug: String
+
+    /// GitHub username to add to the team.
+    @github.FieldHint { createOnly = true }
+    username: String
+
+    /// Role in the team: "member" or "maintainer".
+    @github.FieldHint {}
+    role: Role = "member"
+}

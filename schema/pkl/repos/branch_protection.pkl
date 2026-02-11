@@ -1,0 +1,78 @@
+module github.repos.branch_protection
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Repos::BranchProtection"
+
+@github.SubResourceHint
+open class RequiredStatusChecks extends formae.SubResource {
+    /// Require branches to be up to date before merging.
+    @github.FieldHint {}
+    strict: Boolean = false
+
+    /// Status check contexts that must pass before merging.
+    @github.FieldHint {}
+    contexts: Listing<String>?
+}
+
+@github.SubResourceHint
+open class RequiredPullRequestReviews extends formae.SubResource {
+    /// Number of approving reviews required.
+    @github.FieldHint {}
+    requiredApprovingReviewCount: Int = 1
+
+    /// Dismiss stale reviews when new commits are pushed.
+    @github.FieldHint {}
+    dismissStaleReviews: Boolean = false
+
+    /// Require review from code owners.
+    @github.FieldHint {}
+    requireCodeOwnerReviews: Boolean = false
+
+    /// Require review from the most recent push.
+    @github.FieldHint {}
+    requireLastPushApproval: Boolean = false
+}
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "compositeId"
+}
+open class BranchProtection extends formae.Resource {
+    /// Repository owner.
+    @github.FieldHint { createOnly = true }
+    owner: String
+
+    /// Repository name.
+    @github.FieldHint { createOnly = true }
+    repo: String
+
+    /// Branch name or pattern to protect.
+    @github.FieldHint { createOnly = true }
+    branch: String
+
+    /// Enforce restrictions for repository administrators.
+    @github.FieldHint {}
+    enforceAdmins: Boolean = false
+
+    /// Require a linear commit history (no merge commits).
+    @github.FieldHint {}
+    requiredLinearHistory: Boolean = false
+
+    /// Allow force pushes to the protected branch.
+    @github.FieldHint {}
+    allowForcePushes: Boolean = false
+
+    /// Allow the protected branch to be deleted.
+    @github.FieldHint {}
+    allowDeletions: Boolean = false
+
+    /// Required status checks before merging.
+    @github.FieldHint {}
+    requiredStatusChecks: RequiredStatusChecks?
+
+    /// Required pull request review settings.
+    @github.FieldHint {}
+    requiredPullRequestReviews: RequiredPullRequestReviews?
+}

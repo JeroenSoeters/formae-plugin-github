@@ -1,0 +1,59 @@
+module github.teams.team
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Teams::Team"
+
+typealias Privacy = "secret"|"closed"
+typealias Permission = "pull"|"push"|"admin"
+typealias NotificationSetting = "notifications_enabled"|"notifications_disabled"
+
+open class TeamResolvable extends formae.Resolvable {
+    hidden type = module.type
+
+    hidden id: TeamResolvable = (this) { property = "id" }
+    hidden slug: TeamResolvable = (this) { property = "slug" }
+    hidden htmlUrl: TeamResolvable = (this) { property = "htmlUrl" }
+}
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "compositeId"
+}
+open class Team extends formae.Resource {
+    hidden parent = this
+
+    /// Organization that owns the team.
+    @github.FieldHint { createOnly = true }
+    organization: String
+
+    /// Team name.
+    @github.FieldHint {}
+    name: String
+
+    /// Team description.
+    @github.FieldHint {}
+    description: String?
+
+    /// Team visibility: "secret" (only visible to members) or "closed" (visible to all org members).
+    @github.FieldHint {}
+    privacy: Privacy = "secret"
+
+    /// Notification setting for team members.
+    @github.FieldHint {}
+    notificationSetting: NotificationSetting = "notifications_enabled"
+
+    /// Default permission level for repos added to this team.
+    @github.FieldHint {}
+    permission: Permission = "pull"
+
+    /// Numeric ID of the parent team (for nested teams).
+    @github.FieldHint {}
+    parentTeamId: Int?
+
+    hidden res: TeamResolvable = new {
+        label = parent.label
+        stack = parent.stack?.label
+    }
+}

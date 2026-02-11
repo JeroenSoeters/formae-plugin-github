@@ -1,0 +1,42 @@
+/*
+ * Conformance Test: Update Repository (in-place)
+ *
+ * Changes mutable fields to trigger an in-place update.
+ * The createOnly fields (owner, autoInit, etc.) remain unchanged.
+ */
+amends "@formae/forma.pkl"
+import "@formae/formae.pkl"
+
+import "@github/github.pkl"
+import "@github/repos/repository.pkl"
+
+local testRunID = read("env:FORMAE_TEST_RUN_ID")
+local testOwner = read("env:GITHUB_TEST_OWNER")
+local stackName = "plugin-sdk-test-repository-\(testRunID)"
+
+forma {
+  new formae.Stack {
+    label = stackName
+    description = "Plugin SDK test for GitHub Repository"
+  }
+
+  new formae.Target {
+    label = "github-target"
+    config = new github.Config {}
+  }
+
+  new repository.Repository {
+    label = "plugin-sdk-test-repository"
+    owner = testOwner
+    name = "formae-test-\(testRunID)"
+    description = "Formae conformance test repository (updated)"   // CHANGED
+    visibility = "public"
+    hasIssues = false                                               // CHANGED
+    hasWiki = true                                                  // CHANGED
+    hasProjects = false
+    allowSquashMerge = true
+    allowMergeCommit = false
+    allowRebaseMerge = false
+    deleteBranchOnMerge = true
+  }
+}

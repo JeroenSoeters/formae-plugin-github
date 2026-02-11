@@ -1,0 +1,39 @@
+/*
+ * Conformance Test: Create Branch Protection
+ *
+ * Creates branch protection rules on the test repository's main branch.
+ * Requires GITHUB_TEST_OWNER and GITHUB_TEST_REPO environment variables.
+ */
+amends "@formae/forma.pkl"
+import "@formae/formae.pkl"
+
+import "@github/github.pkl"
+import "@github/repos/branch_protection.pkl"
+
+local testRunID = read("env:FORMAE_TEST_RUN_ID")
+local testOwner = read("env:GITHUB_TEST_OWNER")
+local testRepo = read("env:GITHUB_TEST_REPO")
+local stackName = "plugin-sdk-test-branch-protection-\(testRunID)"
+
+forma {
+  new formae.Stack {
+    label = stackName
+    description = "Plugin SDK test for GitHub Branch Protection"
+  }
+
+  new formae.Target {
+    label = "github-target"
+    config = new github.Config {}
+  }
+
+  new branch_protection.BranchProtection {
+    label = "plugin-sdk-test-bp"
+    owner = testOwner
+    repo = testRepo
+    branch = "main"
+    enforceAdmins = false
+    requiredLinearHistory = false
+    allowForcePushes = false
+    allowDeletions = false
+  }
+}

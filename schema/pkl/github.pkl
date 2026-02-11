@@ -1,0 +1,29 @@
+module github
+
+import "@formae/formae.pkl"
+
+/// Target configuration for GitHub API access.
+/// Authentication uses GITHUB_TOKEN environment variable (not stored in config).
+open class Config {
+  hidden fixed type: String = "GitHub"
+
+  /// GitHub API base URL. Override for GitHub Enterprise.
+  hidden apiUrl: String = "https://api.github.com"
+
+  /// Default organization for team and org-scoped operations.
+  hidden organization: String?
+
+  fixed Type: String = type
+  fixed ApiUrl: String = apiUrl
+  fixed Organization: String? = organization
+}
+
+class FieldHint extends formae.FieldHint {}
+
+class ResourceHint extends formae.ResourceHint {
+  hidden outputKeyTransformation: (String) -> String = (it) -> it
+}
+
+class SubResourceHint extends formae.SubResourceHint {
+  hidden outputKeyTransformation: (String) -> String = (it) -> it
+}

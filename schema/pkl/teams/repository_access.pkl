@@ -1,0 +1,30 @@
+module github.teams.repository_access
+
+import "../github.pkl"
+import "@formae/formae.pkl"
+
+const type = "GitHub::Teams::RepositoryAccess"
+
+typealias Permission = "pull"|"triage"|"push"|"maintain"|"admin"
+
+@github.ResourceHint {
+    type = module.type
+    identifier = "compositeId"
+}
+open class RepositoryAccess extends formae.Resource {
+    /// Organization that owns the team.
+    @github.FieldHint { createOnly = true }
+    organization: String
+
+    /// Team slug (URL-friendly name).
+    @github.FieldHint { createOnly = true }
+    teamSlug: String
+
+    /// Full repository name (owner/repo).
+    @github.FieldHint { createOnly = true }
+    repository: String
+
+    /// Permission level: pull, triage, push, maintain, or admin.
+    @github.FieldHint {}
+    permission: Permission = "pull"
+}

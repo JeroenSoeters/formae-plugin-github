@@ -1,0 +1,10 @@
+name = "github"
+version = "0.1.0"
+namespace = "GitHub"
+description = "GitHub resource plugin for Formae"
+license = "Apache-2.0"
+minFormaeVersion = "0.80.1"
+
+output {
+  renderer = new JsonRenderer {}
+}
