@@ -75,13 +75,9 @@ jobs:
           pkl eval formae-plugin.pkl --format json > /dev/null
           echo "Manifest validated successfully"
 
-  # Integration tests run against real infrastructure.
-  # This job is disabled by default - enable it after configuring credentials.
   integration-tests:
     needs: [build, lint]
     runs-on: ubuntu-latest
-    # Disabled by default - remove this condition after configuring credentials
-    if: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,11 +91,6 @@ jobs:
         uses: pkl-community/setup-pkl@v0
         with:
           pkl-version: 0.30.0
-
-      # Configure credentials for your infrastructure here
-      # Example:
-      # env:
-      #   MY_API_KEY: ${{ secrets.MY_API_KEY }}
 
       - name: Run integration tests
         run: make test-integration
@@ -115,22 +106,13 @@ jobs:
   conformance-tests:
     needs: [build, lint, pkl-validate]
     runs-on: ubuntu-latest
-    # Disabled by default - change condition after configuring credentials:
-    # if: github.event_name == 'schedule' || github.event_name == 'push' || github.event.inputs.run_conformance == 'true'
-    if: ${{ github.event.inputs.run_conformance == 'true' }}
+    if: github.event_name == 'schedule' || github.event_name == 'push' || github.event.inputs.run_conformance == 'true'
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        # Test against these formae versions. Expand as needed:
-        # formae_version: ['0.78.0', '0.79.0', 'latest']
         formae_version: ['latest']
-
-    # Uncomment and configure for your cloud provider:
-    # permissions:
-    #   id-token: write  # Required for OIDC
-    #   contents: read
 
     steps:
       - name: Checkout
@@ -146,53 +128,17 @@ jobs:
         with:
           pkl-version: 0.30.0
 
-      # =================================================================
-      # CREDENTIAL SETUP - Uncomment and configure for your provider
-      # =================================================================
-
-      # AWS (OIDC - recommended)
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-region: us-east-1
-      #     role-to-assume: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
-      #     role-session-name: ConformanceTests
-
-      # Azure (OIDC - recommended)
-      # - name: Configure Azure Credentials
-      #   uses: azure/login@v2
-      #   with:
-      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # GCP (OIDC - recommended)
-      # - name: Configure GCP Credentials
-      #   uses: google-github-actions/auth@v2
-      #   with:
-      #     workload_identity_provider: projects/PROJECT_ID/locations/global/workloadIdentityPools/POOL/providers/PROVIDER
-      #     service_account: SA_NAME@PROJECT_ID.iam.gserviceaccount.com
-
-      # OpenStack (secrets-based)
-      # - name: Configure OpenStack Credentials
-      #   run: |
-      #     echo "OS_AUTH_URL=${{ secrets.OS_AUTH_URL }}" >> $GITHUB_ENV
-      #     echo "OS_USERNAME=${{ secrets.OS_USERNAME }}" >> $GITHUB_ENV
-      #     echo "OS_PASSWORD=${{ secrets.OS_PASSWORD }}" >> $GITHUB_ENV
-      #     echo "OS_PROJECT_ID=${{ secrets.OS_PROJECT_ID }}" >> $GITHUB_ENV
-
-      # =================================================================
-
       - name: Install plugin
         run: make install
 
       - name: Run conformance tests
         env:
-          FORMAE_TEST_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          GITHUB_TOKEN: ${{ secrets.PLUGIN_GITHUB_TOKEN }}
+          GITHUB_TEST_OWNER: ${{ vars.GITHUB_TEST_OWNER }}
+          GITHUB_TEST_REPO: ${{ vars.GITHUB_TEST_REPO }}
         run: |
-          # Use input version if provided, otherwise use matrix version
           VERSION="${{ inputs.formae_version }}"
           if [ "$VERSION" = "" ] || [ "$VERSION" = "latest" ]; then
             VERSION="${{ matrix.formae_version }}"
           fi
-          make conformance-test VERSION="$VERSION"
+          make conformance-test-crud VERSION="$VERSION"
