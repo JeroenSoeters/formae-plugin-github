@@ -134,8 +134,8 @@ jobs:
       - name: Run conformance tests
         env:
           GITHUB_TOKEN: ${{ secrets.PLUGIN_GITHUB_TOKEN }}
-          GITHUB_TEST_OWNER: ${{ vars.GITHUB_TEST_OWNER }}
-          GITHUB_TEST_REPO: ${{ vars.GITHUB_TEST_REPO }}
+          GITHUB_TEST_OWNER: ${{ vars.TEST_OWNER }}
+          GITHUB_TEST_REPO: ${{ vars.TEST_REPO }}
         run: |
           VERSION="${{ inputs.formae_version }}"
           if [ "$VERSION" = "" ] || [ "$VERSION" = "latest" ]; then
