@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/google/go-github/v69 v69.2.0
-	github.com/platform-engineering-labs/formae/pkg/plugin v0.1.11
+	github.com/platform-engineering-labs/formae/pkg/plugin v0.1.13
 	github.com/platform-engineering-labs/formae/pkg/plugin-conformance-tests v0.1.19
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.47.0
