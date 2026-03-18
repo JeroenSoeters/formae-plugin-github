@@ -1,13 +1,13 @@
 module github.com/platform-engineering-labs/formae-plugin-github
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/google/go-github/v69 v69.2.0
 	github.com/platform-engineering-labs/formae/pkg/plugin v0.1.11
 	github.com/platform-engineering-labs/formae/pkg/plugin-conformance-tests v0.1.19
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/crypto v0.47.0
+	golang.org/x/crypto v0.49.0
 )
 
 require (
@@ -52,9 +52,9 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
