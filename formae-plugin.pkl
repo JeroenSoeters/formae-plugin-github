@@ -1,8 +1,13 @@
+/*
+ * Formae Plugin Manifest — GitHub
+ */
+
 name = "github"
 version = "0.1.0"
 namespace = "GitHub"
-description = "GitHub resource plugin for Formae"
+summary = "Manage GitHub repositories, teams, branch protection, and CI/CD configuration"
 license = "Apache-2.0"
+category = "cicd"
 minFormaeVersion = "0.80.1"
 
 output {
