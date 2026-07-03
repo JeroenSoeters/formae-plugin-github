@@ -256,7 +256,9 @@ func (t *Team) List(ctx context.Context, req *resource.ListRequest) (*resource.L
 
 	page := 1
 	if req.PageToken != nil {
-		fmt.Sscanf(*req.PageToken, "%d", &page)
+		if _, err := fmt.Sscanf(*req.PageToken, "%d", &page); err != nil {
+			page = 1
+		}
 	}
 
 	teams, resp, err := gh.Teams.ListTeams(ctx, org, &github.ListOptions{

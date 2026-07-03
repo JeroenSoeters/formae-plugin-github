@@ -116,7 +116,7 @@ func findRunAfterDispatch(ctx context.Context, gh *github.Client, owner, repo, w
 		}
 
 		for _, run := range runs.WorkflowRuns {
-			if run.GetCreatedAt().Time.After(dispatchTime.Add(-5 * time.Second)) {
+			if run.GetCreatedAt().After(dispatchTime.Add(-5 * time.Second)) {
 				return run, nil
 			}
 		}
