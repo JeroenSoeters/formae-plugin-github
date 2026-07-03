@@ -46,7 +46,7 @@ func TestTeamCreate(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, called.Load(), "create handler was not called")
 	assert.Equal(t, resource.OperationStatusSuccess, result.ProgressResult.OperationStatus)
-	assert.Equal(t, "42", result.ProgressResult.NativeID)
+	assert.Equal(t, "test-org/platform", result.ProgressResult.NativeID)
 
 	var resultProps teamProperties
 	require.NoError(t, json.Unmarshal(result.ProgressResult.ResourceProperties, &resultProps))
@@ -60,7 +60,7 @@ func TestTeamRead(t *testing.T) {
 	// Setup
 	var called atomic.Bool
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v3/organizations/0/team/42", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v3/orgs/test-org/teams/platform", func(w http.ResponseWriter, r *http.Request) {
 		called.Store(true)
 		assert.Equal(t, http.MethodGet, r.Method)
 		jsonResponse(w, http.StatusOK, githubTeamResponse(42, "platform", "platform", "test-org"))
@@ -69,7 +69,7 @@ func TestTeamRead(t *testing.T) {
 
 	// Execute
 	result, err := team.Read(context.Background(), &resource.ReadRequest{
-		NativeID:     "42",
+		NativeID:     "test-org/platform",
 		ResourceType: TeamResourceType,
 	})
 
@@ -89,7 +89,7 @@ func TestTeamReadNotFound(t *testing.T) {
 	// Setup
 	var called atomic.Bool
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v3/organizations/0/team/999", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v3/orgs/test-org/teams/missing", func(w http.ResponseWriter, r *http.Request) {
 		called.Store(true)
 		jsonResponse(w, http.StatusNotFound, map[string]interface{}{"message": "Not Found"})
 	})
@@ -97,7 +97,7 @@ func TestTeamReadNotFound(t *testing.T) {
 
 	// Execute
 	result, err := team.Read(context.Background(), &resource.ReadRequest{
-		NativeID:     "999",
+		NativeID:     "test-org/missing",
 		ResourceType: TeamResourceType,
 	})
 
@@ -126,7 +126,7 @@ func TestTeamUpdate(t *testing.T) {
 		Privacy:      "closed",
 	})
 	result, err := team.Update(context.Background(), &resource.UpdateRequest{
-		NativeID:          "42",
+		NativeID:          "test-org/platform",
 		DesiredProperties: props,
 	})
 
@@ -134,7 +134,7 @@ func TestTeamUpdate(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, called.Load(), "update handler was not called")
 	assert.Equal(t, resource.OperationStatusSuccess, result.ProgressResult.OperationStatus)
-	assert.Equal(t, "42", result.ProgressResult.NativeID)
+	assert.Equal(t, "test-org/platform-eng", result.ProgressResult.NativeID)
 
 	var resultProps teamProperties
 	require.NoError(t, json.Unmarshal(result.ProgressResult.ResourceProperties, &resultProps))
@@ -145,7 +145,7 @@ func TestTeamDelete(t *testing.T) {
 	// Setup
 	var called atomic.Bool
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v3/organizations/0/team/42", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v3/orgs/test-org/teams/platform", func(w http.ResponseWriter, r *http.Request) {
 		called.Store(true)
 		assert.Equal(t, http.MethodDelete, r.Method)
 		w.WriteHeader(http.StatusNoContent)
@@ -154,7 +154,7 @@ func TestTeamDelete(t *testing.T) {
 
 	// Execute
 	result, err := team.Delete(context.Background(), &resource.DeleteRequest{
-		NativeID: "42",
+		NativeID: "test-org/platform",
 	})
 
 	// Verify
@@ -167,7 +167,7 @@ func TestTeamDeleteNotFound(t *testing.T) {
 	// Setup
 	var called atomic.Bool
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v3/organizations/0/team/999", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v3/orgs/test-org/teams/missing", func(w http.ResponseWriter, r *http.Request) {
 		called.Store(true)
 		jsonResponse(w, http.StatusNotFound, map[string]interface{}{"message": "Not Found"})
 	})
@@ -175,7 +175,7 @@ func TestTeamDeleteNotFound(t *testing.T) {
 
 	// Execute
 	result, err := team.Delete(context.Background(), &resource.DeleteRequest{
-		NativeID: "999",
+		NativeID: "test-org/missing",
 	})
 
 	// Verify
@@ -208,6 +208,6 @@ func TestTeamList(t *testing.T) {
 	// Verify
 	require.NoError(t, err)
 	assert.True(t, called.Load(), "list handler was not called")
-	assert.Equal(t, []string{"10", "20"}, result.NativeIDs)
+	assert.Equal(t, []string{"test-org/alpha", "test-org/beta"}, result.NativeIDs)
 	assert.Nil(t, result.NextPageToken)
 }
