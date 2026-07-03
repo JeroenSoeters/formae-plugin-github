@@ -57,11 +57,11 @@ open class Repository extends formae.Resource {
     hasProjects: Boolean = true
 
     /// Make this repository a template repository.
-    @github.FieldHint {}
+    @github.FieldHint { hasProviderDefault = true }
     isTemplate: Boolean?
 
     /// The default branch (must already exist).
-    @github.FieldHint {}
+    @github.FieldHint { hasProviderDefault = true }
     defaultBranch: String?
 
     /// Allow squash-merging pull requests.
@@ -77,7 +77,7 @@ open class Repository extends formae.Resource {
     allowRebaseMerge: Boolean = true
 
     /// Allow auto-merge on pull requests.
-    @github.FieldHint {}
+    @github.FieldHint { hasProviderDefault = true }
     allowAutoMerge: Boolean?
 
     /// Automatically delete head branches after merge.
@@ -85,7 +85,7 @@ open class Repository extends formae.Resource {
     deleteBranchOnMerge: Boolean?
 
     /// Archive the repository (one-way: cannot be unarchived via API).
-    @github.FieldHint {}
+    @github.FieldHint { hasProviderDefault = true }
     archived: Boolean?
 
     /// Repository topics (automatically lowercased by GitHub).
