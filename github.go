@@ -6,6 +6,7 @@ import (
 
 	"github.com/platform-engineering-labs/formae-plugin-github/pkg/config"
 	"github.com/platform-engineering-labs/formae-plugin-github/pkg/registry"
+	pkgmodel "github.com/platform-engineering-labs/formae/pkg/model"
 	"github.com/platform-engineering-labs/formae/pkg/plugin"
 	"github.com/platform-engineering-labs/formae/pkg/plugin/resource"
 
@@ -20,30 +21,30 @@ var _ plugin.ResourcePlugin = &Plugin{}
 
 // RateLimit returns rate limiting config. GitHub allows 5,000 req/hour (~1.4/sec).
 // We set 2/sec with namespace scope to stay comfortably under limits.
-func (p *Plugin) RateLimit() plugin.RateLimitConfig {
-	return plugin.RateLimitConfig{
-		Scope:                            plugin.RateLimitScopeNamespace,
+func (p *Plugin) RateLimit() pkgmodel.RateLimitConfig {
+	return pkgmodel.RateLimitConfig{
+		Scope:                            pkgmodel.RateLimitScopeNamespace,
 		MaxRequestsPerSecondForNamespace: 2,
 	}
 }
 
 // DiscoveryFilters returns filters to exclude certain resources from discovery.
-func (p *Plugin) DiscoveryFilters() []plugin.MatchFilter {
+func (p *Plugin) DiscoveryFilters() []pkgmodel.MatchFilter {
 	return nil
 }
 
 // LabelConfig returns the configuration for extracting human-readable labels.
-func (p *Plugin) LabelConfig() plugin.LabelConfig {
-	return plugin.LabelConfig{
+func (p *Plugin) LabelConfig() pkgmodel.LabelConfig {
+	return pkgmodel.LabelConfig{
 		DefaultQuery: "$.name",
 		ResourceOverrides: map[string]string{
 			"GitHub::Repos::Repository":       "$.fullName",
-			"GitHub::Actions::WorkflowRun":     "$.workflow",
-			"GitHub::Repos::BranchProtection":  "$.branch",
-			"GitHub::Teams::Membership":        "$.username",
-			"GitHub::Teams::RepositoryAccess":  "$.repository",
-			"GitHub::Actions::Secret":          "$.name",
-			"GitHub::Actions::Variable":        "$.name",
+			"GitHub::Actions::WorkflowRun":    "$.workflow",
+			"GitHub::Repos::BranchProtection": "$.branch",
+			"GitHub::Teams::Membership":       "$.username",
+			"GitHub::Teams::RepositoryAccess": "$.repository",
+			"GitHub::Actions::Secret":         "$.name",
+			"GitHub::Actions::Variable":       "$.name",
 		},
 	}
 }
