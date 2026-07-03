@@ -1,0 +1,19 @@
+/// GitHub plugin configuration.
+///
+/// Users import this via: import "plugins:/GitHub.pkl" as GitHub
+///
+/// Then use it in their formae.conf.pkl:
+///   agent {
+///       resourcePlugins {
+///           new GitHub.PluginConfig {
+///               rateLimit { maxRequestsPerSecond = 2 }
+///           }
+///       }
+///   }
+open module github.Config
+
+extends "formae:/Config.pkl"
+
+class PluginConfig extends BaseResourcePluginConfig {
+    type = "github" // Plugin name used by formae to identify this plugin.
+}
