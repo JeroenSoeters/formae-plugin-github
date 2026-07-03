@@ -97,24 +97,19 @@ clean-environment:
 	@./scripts/ci/clean-environment.sh
 
 ## conformance-test: Run all conformance tests (CRUD + discovery)
-## Usage: make conformance-test [VERSION=0.80.0] [TEST=s3-bucket] [TIMEOUT=15]
-## Downloads the specified formae version (or latest) and runs conformance tests.
+## Usage: make conformance-test [TEST=s3-bucket] [TIMEOUT=30m]
 ## Calls clean-environment before and after tests.
-##
-## Parameters:
-##   VERSION - Formae version to test against (default: latest)
-##   TEST    - Filter tests by name pattern (e.g., TEST=s3-bucket)
-##   TIMEOUT - Timeout in minutes for long-running operations (default: 5)
 conformance-test: conformance-test-crud conformance-test-discovery
 
 ## conformance-test-crud: Run only CRUD lifecycle tests
-## Usage: make conformance-test-crud [VERSION=0.80.0] [TEST=s3-bucket] [TIMEOUT=15]
+## Usage: make conformance-test-crud [TEST=s3-bucket] [TIMEOUT=30m]
 conformance-test-crud: install
 	@echo "Pre-test cleanup..."
 	@./scripts/ci/clean-environment.sh || true
 	@echo ""
 	@echo "Running CRUD conformance tests..."
-	@FORMAE_TEST_FILTER="$(TEST)" FORMAE_TEST_TYPE=crud FORMAE_TEST_TIMEOUT="$(TIMEOUT)" ./scripts/run-conformance-tests.sh $(VERSION); \
+	@FORMAE_TEST_FILTER="$(TEST)" FORMAE_TEST_TYPE=crud \
+		$(GO) test -tags=conformance -v -timeout $(or $(TIMEOUT),30m) ./...; \
 	TEST_EXIT=$$?; \
 	echo ""; \
 	echo "Post-test cleanup..."; \
@@ -122,13 +117,14 @@ conformance-test-crud: install
 	exit $$TEST_EXIT
 
 ## conformance-test-discovery: Run only discovery tests
-## Usage: make conformance-test-discovery [VERSION=0.80.0] [TEST=s3-bucket] [TIMEOUT=15]
+## Usage: make conformance-test-discovery [TEST=s3-bucket] [TIMEOUT=30m]
 conformance-test-discovery: install
 	@echo "Pre-test cleanup..."
 	@./scripts/ci/clean-environment.sh || true
 	@echo ""
 	@echo "Running discovery conformance tests..."
-	@FORMAE_TEST_FILTER="$(TEST)" FORMAE_TEST_TYPE=discovery FORMAE_TEST_TIMEOUT="$(TIMEOUT)" ./scripts/run-conformance-tests.sh $(VERSION); \
+	@FORMAE_TEST_FILTER="$(TEST)" FORMAE_TEST_TYPE=discovery \
+		$(GO) test -tags=conformance -v -timeout $(or $(TIMEOUT),30m) ./...; \
 	TEST_EXIT=$$?; \
 	echo ""; \
 	echo "Post-test cleanup..."; \

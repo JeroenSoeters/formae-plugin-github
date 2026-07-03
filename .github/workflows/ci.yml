@@ -133,12 +133,8 @@ jobs:
 
       - name: Run conformance tests
         env:
+          FORMAE_TEST_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           GITHUB_TOKEN: ${{ secrets.PLUGIN_GITHUB_TOKEN }}
           GITHUB_TEST_OWNER: ${{ vars.TEST_OWNER }}
           GITHUB_TEST_REPO: ${{ vars.TEST_REPO }}
-        run: |
-          VERSION="${{ inputs.formae_version }}"
-          if [ "$VERSION" = "" ] || [ "$VERSION" = "latest" ]; then
-            VERSION="${{ matrix.formae_version }}"
-          fi
-          make conformance-test-crud VERSION="$VERSION"
+        run: make conformance-test-crud
