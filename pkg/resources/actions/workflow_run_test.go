@@ -30,28 +30,17 @@ func workflowRunResponse(id int64, status, conclusion, branch, workflow string) 
 }
 
 func TestWorkflowRunCreate(t *testing.T) {
-	// Setup: no existing successful run → dispatch → find new run
+	// Setup: no existing successful run → dispatch → return InProgress without
+	// blocking. The run is discovered later by Status, so Create must not poll.
 	var dispatched atomic.Bool
-	callCount := 0
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/v3/repos/test-owner/test-repo/actions/workflows/deploy.yml/runs", func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		status := r.URL.Query().Get("status")
-		if status == "success" {
-			// Idempotency check: no existing successful run
-			jsonResponse(w, http.StatusOK, map[string]interface{}{
-				"total_count":   0,
-				"workflow_runs": []interface{}{},
-			})
-			return
-		}
-		// findRunAfterDispatch poll: return a new run
+		// Idempotency check only: no existing successful run.
+		assert.Equal(t, "success", r.URL.Query().Get("status"))
 		jsonResponse(w, http.StatusOK, map[string]interface{}{
-			"total_count": 1,
-			"workflow_runs": []interface{}{
-				workflowRunResponse(12345, "queued", "", "main", ".github/workflows/deploy.yml"),
-			},
+			"total_count":   0,
+			"workflow_runs": []interface{}{},
 		})
 	})
 	mux.HandleFunc("/api/v3/repos/test-owner/test-repo/actions/workflows/deploy.yml/dispatches", func(w http.ResponseWriter, r *http.Request) {
@@ -71,16 +60,63 @@ func TestWorkflowRunCreate(t *testing.T) {
 		Properties: props,
 	})
 
-	// Verify
+	// Verify: dispatched, InProgress, and the ID is a dispatch token (no run yet).
 	require.NoError(t, err)
 	assert.True(t, dispatched.Load(), "dispatch handler was not called")
 	assert.Equal(t, resource.OperationStatusInProgress, result.ProgressResult.OperationStatus)
-	assert.Equal(t, "test-owner/test-repo/12345", result.ProgressResult.NativeID)
+	assert.Equal(t, result.ProgressResult.NativeID, result.ProgressResult.RequestID)
 
-	var resultProps workflowRunProperties
-	require.NoError(t, json.Unmarshal(result.ProgressResult.ResourceProperties, &resultProps))
-	assert.Equal(t, int64(12345), resultProps.RunID)
-	assert.Equal(t, "queued", resultProps.Status)
+	_, _, workflow, ref, _, ok := parseDispatchToken(result.ProgressResult.NativeID)
+	require.True(t, ok, "expected a dispatch token native ID, got %q", result.ProgressResult.NativeID)
+	assert.Equal(t, "deploy.yml", workflow)
+	assert.Equal(t, "main", ref)
+}
+
+func TestWorkflowRunStatusDiscoversDispatchedRun(t *testing.T) {
+	// A dispatch token resolves to the concrete run via a single list call,
+	// then reports that run's status.
+	var listed atomic.Bool
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/repos/test-owner/test-repo/actions/workflows/deploy.yml/runs", func(w http.ResponseWriter, r *http.Request) {
+		listed.Store(true)
+		jsonResponse(w, http.StatusOK, map[string]interface{}{
+			"total_count": 1,
+			"workflow_runs": []interface{}{
+				workflowRunResponse(12345, "in_progress", "", "main", ".github/workflows/deploy.yml"),
+			},
+		})
+	})
+	mux.HandleFunc("/api/v3/repos/test-owner/test-repo/actions/runs/12345", func(w http.ResponseWriter, r *http.Request) {
+		jsonResponse(w, http.StatusOK, workflowRunResponse(12345, "in_progress", "", "main", ".github/workflows/deploy.yml"))
+	})
+	wr := newTestWorkflowRun(t, mux)
+
+	token := dispatchToken("test-owner", "test-repo", "deploy.yml", "main", time.Now().Add(-2*time.Second))
+	result, err := wr.Status(context.Background(), &resource.StatusRequest{RequestID: token})
+
+	require.NoError(t, err)
+	assert.True(t, listed.Load(), "list handler was not called")
+	assert.Equal(t, resource.OperationStatusInProgress, result.ProgressResult.OperationStatus)
+	assert.Equal(t, "test-owner/test-repo/12345", result.ProgressResult.NativeID)
+}
+
+func TestWorkflowRunStatusPendingDispatch(t *testing.T) {
+	// No run has appeared yet → stay InProgress with the same dispatch token.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/repos/test-owner/test-repo/actions/workflows/deploy.yml/runs", func(w http.ResponseWriter, r *http.Request) {
+		jsonResponse(w, http.StatusOK, map[string]interface{}{
+			"total_count":   0,
+			"workflow_runs": []interface{}{},
+		})
+	})
+	wr := newTestWorkflowRun(t, mux)
+
+	token := dispatchToken("test-owner", "test-repo", "deploy.yml", "main", time.Now())
+	result, err := wr.Status(context.Background(), &resource.StatusRequest{RequestID: token})
+
+	require.NoError(t, err)
+	assert.Equal(t, resource.OperationStatusInProgress, result.ProgressResult.OperationStatus)
+	assert.Equal(t, token, result.ProgressResult.RequestID)
 }
 
 func TestWorkflowRunCreateIdempotent(t *testing.T) {

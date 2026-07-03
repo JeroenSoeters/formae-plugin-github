@@ -102,32 +102,58 @@ func workflowFileName(path string) string {
 	return path
 }
 
-// findRunAfterDispatch polls for a workflow run that was triggered after dispatchTime.
-func findRunAfterDispatch(ctx context.Context, gh *github.Client, owner, repo, workflow, ref string, dispatchTime time.Time) (*github.WorkflowRun, error) {
-	deadline := time.Now().Add(60 * time.Second)
-	for time.Now().Before(deadline) {
-		runs, _, err := gh.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflow, &github.ListWorkflowRunsOptions{
-			Branch:      ref,
-			Event:       "workflow_dispatch",
-			ListOptions: github.ListOptions{PerPage: 5},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to list workflow runs: %w", err)
-		}
+// dispatchTokenPrefix marks a RequestID/NativeID that identifies a workflow that
+// has been dispatched but whose run has not been discovered yet.
+const dispatchTokenPrefix = "dispatch:"
 
-		for _, run := range runs.WorkflowRuns {
-			if run.GetCreatedAt().After(dispatchTime.Add(-5 * time.Second)) {
-				return run, nil
-			}
-		}
+// dispatchToken encodes the context needed to find a dispatched run later.
+// Format: "dispatch:<owner>/<repo>:<workflow>:<ref>:<unixNano>".
+//
+// workflow_dispatch does not return a run ID, so Create/Update return this
+// token immediately after dispatching and Status resolves the concrete run.
+// This keeps Create/Update from blocking while GitHub registers the run, which
+// would otherwise exceed the agent's plugin-operator call timeout.
+func dispatchToken(owner, repo, workflow, ref string, dispatchTime time.Time) string {
+	return fmt.Sprintf("%s%s/%s:%s:%s:%d", dispatchTokenPrefix, owner, repo, workflow, ref, dispatchTime.UnixNano())
+}
 
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(3 * time.Second):
+// parseDispatchToken decodes a dispatch token. ok is false if s is not one.
+func parseDispatchToken(s string) (owner, repo, workflow, ref string, dispatchTime time.Time, ok bool) {
+	if !strings.HasPrefix(s, dispatchTokenPrefix) {
+		return "", "", "", "", time.Time{}, false
+	}
+	parts := strings.Split(strings.TrimPrefix(s, dispatchTokenPrefix), ":")
+	if len(parts) != 4 {
+		return "", "", "", "", time.Time{}, false
+	}
+	repoParts := strings.SplitN(parts[0], "/", 2)
+	if len(repoParts) != 2 {
+		return "", "", "", "", time.Time{}, false
+	}
+	nano, err := strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return "", "", "", "", time.Time{}, false
+	}
+	return repoParts[0], repoParts[1], parts[1], parts[2], time.Unix(0, nano), true
+}
+
+// findDispatchedRun looks for a workflow run triggered at or after dispatchTime.
+// It makes a single API call (no polling) and returns nil if none is found yet.
+func findDispatchedRun(ctx context.Context, gh *github.Client, owner, repo, workflow, ref string, dispatchTime time.Time) (*github.WorkflowRun, error) {
+	runs, _, err := gh.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflow, &github.ListWorkflowRunsOptions{
+		Branch:      ref,
+		Event:       "workflow_dispatch",
+		ListOptions: github.ListOptions{PerPage: 5},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workflow runs: %w", err)
+	}
+	for _, run := range runs.WorkflowRuns {
+		if run.GetCreatedAt().After(dispatchTime.Add(-5 * time.Second)) {
+			return run, nil
 		}
 	}
-	return nil, fmt.Errorf("timed out waiting for workflow run to appear after dispatch")
+	return nil, nil
 }
 
 func (w *WorkflowRun) populateArtifact(ctx context.Context, gh *github.Client, owner, repo string, props *workflowRunProperties) {
@@ -198,7 +224,9 @@ func (w *WorkflowRun) Create(ctx context.Context, req *resource.CreateRequest) (
 		}, nil
 	}
 
-	// Dispatch the workflow.
+	// Dispatch the workflow and return immediately. Status() discovers the
+	// resulting run and polls it to completion, so Create never blocks waiting
+	// for GitHub to register the run.
 	dispatchTime := time.Now()
 	event := github.CreateWorkflowDispatchEventRequest{
 		Ref:    props.Ref,
@@ -209,26 +237,15 @@ func (w *WorkflowRun) Create(ctx context.Context, req *resource.CreateRequest) (
 		return nil, fmt.Errorf("failed to dispatch workflow: %w", err)
 	}
 
-	// Find the run that was just dispatched.
-	run, err := findRunAfterDispatch(ctx, gh, owner, repo, props.Workflow, props.Ref, dispatchTime)
-	if err != nil {
-		return nil, err
-	}
-
-	nativeID := workflowRunNativeID(props.Repository, run.GetID())
-	props.RunID = run.GetID()
-	props.Status = run.GetStatus()
-	props.Conclusion = run.GetConclusion()
-	props.HtmlUrl = run.GetHTMLURL()
+	token := dispatchToken(owner, repo, props.Workflow, props.Ref, dispatchTime)
 	b, _ := json.Marshal(props)
 
-	// Return InProgress — Status() will poll for completion.
 	return &resource.CreateResult{
 		ProgressResult: &resource.ProgressResult{
 			Operation:          resource.OperationCreate,
 			OperationStatus:    resource.OperationStatusInProgress,
-			RequestID:          nativeID,
-			NativeID:           nativeID,
+			RequestID:          token,
+			NativeID:           token,
 			ResourceProperties: b,
 		},
 	}, nil
@@ -297,6 +314,7 @@ func (w *WorkflowRun) Update(ctx context.Context, req *resource.UpdateRequest) (
 			return nil, err
 		}
 
+		// Dispatch and return immediately; Status() resolves the new run.
 		dispatchTime := time.Now()
 		event := github.CreateWorkflowDispatchEventRequest{
 			Ref:    desired.Ref,
@@ -307,24 +325,15 @@ func (w *WorkflowRun) Update(ctx context.Context, req *resource.UpdateRequest) (
 			return nil, fmt.Errorf("failed to dispatch workflow: %w", err)
 		}
 
-		run, err := findRunAfterDispatch(ctx, gh, owner, repo, desired.Workflow, desired.Ref, dispatchTime)
-		if err != nil {
-			return nil, err
-		}
-
-		nativeID := workflowRunNativeID(desired.Repository, run.GetID())
-		desired.RunID = run.GetID()
-		desired.Status = run.GetStatus()
-		desired.Conclusion = run.GetConclusion()
-		desired.HtmlUrl = run.GetHTMLURL()
+		token := dispatchToken(owner, repo, desired.Workflow, desired.Ref, dispatchTime)
 		b, _ := json.Marshal(desired)
 
 		return &resource.UpdateResult{
 			ProgressResult: &resource.ProgressResult{
 				Operation:          resource.OperationUpdate,
 				OperationStatus:    resource.OperationStatusInProgress,
-				RequestID:          nativeID,
-				NativeID:           nativeID,
+				RequestID:          token,
+				NativeID:           token,
 				ResourceProperties: b,
 			},
 		}, nil
@@ -385,12 +394,40 @@ func (w *WorkflowRun) Status(ctx context.Context, req *resource.StatusRequest) (
 		return nil, err
 	}
 
-	// RequestID is the NativeID: "owner/repo/runId"
+	// A dispatch token means the run has not been discovered yet. Find it with
+	// a single API call; until it appears, stay InProgress with the same token.
+	if owner, repo, workflow, ref, dispatchTime, ok := parseDispatchToken(req.RequestID); ok {
+		run, err := findDispatchedRun(ctx, gh, owner, repo, workflow, ref, dispatchTime)
+		if err != nil {
+			return nil, err
+		}
+		if run == nil {
+			props := workflowRunProperties{Repository: owner + "/" + repo, Workflow: workflow, Ref: ref}
+			b, _ := json.Marshal(props)
+			return &resource.StatusResult{
+				ProgressResult: &resource.ProgressResult{
+					Operation:          resource.OperationCheckStatus,
+					OperationStatus:    resource.OperationStatusInProgress,
+					RequestID:          req.RequestID,
+					NativeID:           req.RequestID,
+					ResourceProperties: b,
+					StatusMessage:      "waiting for workflow run to appear",
+				},
+			}, nil
+		}
+		return w.statusForRun(ctx, gh, owner, repo, run.GetID())
+	}
+
+	// RequestID is the resolved NativeID: "owner/repo/runId".
 	owner, repo, runID, err := parseWorkflowRunNativeID(req.RequestID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid request ID: %w", err)
 	}
+	return w.statusForRun(ctx, gh, owner, repo, runID)
+}
 
+// statusForRun fetches a concrete run and maps its state to a progress result.
+func (w *WorkflowRun) statusForRun(ctx context.Context, gh *github.Client, owner, repo string, runID int64) (*resource.StatusResult, error) {
 	run, _, err := gh.Actions.GetWorkflowRunByID(ctx, owner, repo, runID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check workflow run status: %w", err)
