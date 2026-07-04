@@ -13,6 +13,7 @@ import (
 	"github.com/platform-engineering-labs/formae-plugin-github/pkg/config"
 	"github.com/platform-engineering-labs/formae-plugin-github/pkg/prov"
 	"github.com/platform-engineering-labs/formae-plugin-github/pkg/registry"
+	"github.com/platform-engineering-labs/formae/pkg/plugin"
 	"github.com/platform-engineering-labs/formae/pkg/plugin/resource"
 )
 
@@ -240,6 +241,8 @@ func (w *WorkflowRun) Create(ctx context.Context, req *resource.CreateRequest) (
 	token := dispatchToken(owner, repo, props.Workflow, props.Ref, dispatchTime)
 	b, _ := json.Marshal(props)
 
+	plugin.LoggerFromContext(ctx).Info("workflow-run create: dispatched, returning InProgress", "requestID", token)
+
 	return &resource.CreateResult{
 		ProgressResult: &resource.ProgressResult{
 			Operation:          resource.OperationCreate,
@@ -389,6 +392,8 @@ func (w *WorkflowRun) Delete(ctx context.Context, req *resource.DeleteRequest) (
 }
 
 func (w *WorkflowRun) Status(ctx context.Context, req *resource.StatusRequest) (*resource.StatusResult, error) {
+	plugin.LoggerFromContext(ctx).Info("workflow-run status: invoked", "requestID", req.RequestID, "resourceType", req.ResourceType)
+
 	gh, err := w.client()
 	if err != nil {
 		return nil, err
@@ -401,6 +406,7 @@ func (w *WorkflowRun) Status(ctx context.Context, req *resource.StatusRequest) (
 		if err != nil {
 			return nil, err
 		}
+		plugin.LoggerFromContext(ctx).Info("workflow-run status: dispatch-token resolve", "found", run != nil)
 		if run == nil {
 			props := workflowRunProperties{Repository: owner + "/" + repo, Workflow: workflow, Ref: ref}
 			b, _ := json.Marshal(props)

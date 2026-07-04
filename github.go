@@ -82,6 +82,7 @@ func (p *Plugin) Delete(ctx context.Context, req *resource.DeleteRequest) (*reso
 }
 
 func (p *Plugin) Status(ctx context.Context, req *resource.StatusRequest) (*resource.StatusResult, error) {
+	plugin.LoggerFromContext(ctx).Info("plugin.Status invoked", "resourceType", req.ResourceType, "hasProvisioner", registry.HasProvisioner(req.ResourceType, resource.OperationCheckStatus))
 	cfg := config.FromTargetConfig(req.TargetConfig)
 	if !registry.HasProvisioner(req.ResourceType, resource.OperationCheckStatus) {
 		return &resource.StatusResult{
